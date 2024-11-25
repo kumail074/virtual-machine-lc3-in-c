@@ -1,0 +1,8 @@
+.ORIG X3000                     ;
+loaded                          ;
+LEA R0, HELLO_STR               ;
+PUTs                            ;
+HALT                            ;
+HELLO_STR .STRINGZ "Hey Patch:  ;
+.END                            ;
+
