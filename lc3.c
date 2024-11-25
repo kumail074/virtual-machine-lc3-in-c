@@ -66,8 +66,27 @@ uint16_t reg[R_COUNT];
 // input buffering
 // handle interrupt
 // sign extend
+uint16_t sign_extend(uint16_t x, int bit_count) {
+    if((x >> (bit_count - 1)) & 1) {
+        x |= (0xFFFF << bit_count);
+    }
+    return x;
+}
+
 // swap
 // update flags
+void update_flags(uint16_t r) {
+    if(reg[r] == 0) {
+        reg[R_COND] = FL_ZRO;
+    } else if(reg[r] >> 15) {
+        reg[R_COND] = FL_NEG;
+    } else {
+        reg[R_COND] = FL_POS;
+    }
+}
+
+
+
 // read image file
 // read image 
 // memory access
@@ -100,16 +119,52 @@ int main(int argc, char *argv[]) {
         uint16_t op = instr >> 12;
         switch(op) {
             case OP_ADD:
-                //add
+                {
+       /*DR */      uint16_t r0 = (instr >> 9) & 0x7;
+       /*SR1 */     uint16_t r1 = (instr >> 6) & 0x7;
+/*check IM-MODE*/   uint16_t imm_flag = (instr >> 5) & 0x1;
+                    if(imm_flag) {
+                        uint16_t imm5 = sign_extend(instr & 0x1F, 5);
+                        reg[r0] = reg[r1] + imm5;
+                    } else {
+                        uint16_t r2 = instr & 0x7;
+                        reg[r0] = reg[r1] + reg[r2];
+                    }
+                    update_flags(r0);
+                }
                 break;
             case OP_AND:
-                //and
+                {
+                    uint16_t r0 = (instr >> 9) & 0x7;
+                    uint16_t r1 = (instr >> 6) & 0x7;
+                    uint16_t imm_flag = (instr >> 5) & 0x1;
+                    if(imm_flag) {
+                        uint16_t imm5 = sign_extend(instr & 0x1F, 5);
+                        reg[r0] = reg[r1] & imm5;
+                    } else {
+                        uint16_t r2 = instr & 0x7;
+                        reg[r0] = reg[r1] & reg[r2];
+                    }
+                    update_flags(r0);
+                }
                 break;
             case OP_NOT:
-                //not
+                {
+                    uint16_t r0 = (instr >> 9) & 0x7;
+                    uint16_t r1 = (instr >> 6) & 0x7;
+
+                    reg[r0] = -reg[r1];
+                    update_flags(r0);
+                }
                 break;
             case OP_BR:
-                //br
+                {
+                    uint16_t pc_offset = sign_extend(instr & 0x1FF, 9);
+                    uint16_t cond_flag = (instr >> 9) & 0x7;
+                    if(cond_flag & reg[R_COND]) {
+                        reg[R_PC] += pc_offset;
+                    }
+                }
                 break;
             case OP_JMP:
                 //jmp
@@ -121,7 +176,12 @@ int main(int argc, char *argv[]) {
                 //ld
                 break;
             case OP_LDI:
-                //ldi
+                {
+                    uint16_t r0 = (instr >> 9) & 0x7;
+                    uint16_t pc_offset = sign_extent(instr & 0x1FF, 9);
+                    reg[r0] = mem_read(mem_read(reg[R_PC] + pc_offset));
+                    update_flags(r0);
+                }
                 break;
             case OP_LDR:
                 //ldr
@@ -144,7 +204,7 @@ int main(int argc, char *argv[]) {
             case OP_RES:
             case OP_RTI:
             default:
-                //bad opcode
+                exit(2);
                 break;
         }
     }
