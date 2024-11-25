@@ -12,7 +12,7 @@ It containes **16 bits** (or 2 bytes) address space.
 - **P** (positive)
 
 **Processor Status Register** (PSR): 16-bit register, containing status information about the currently executing process:  
-**PSR[10:8]** defines **priority level** (from PL7 to PL0, where PL7 is highest)  
+- **PSR[10:8]** defines **priority level** (from PL7 to PL0, where PL7 is highest)  
 - **PSR[15]** defines **privilege mode** e.i. supervisor mode (privileged and PSR[15] = 0) and user mode (unprivileged and PSR[15] = 1)
 - **PSR[2:0]** contains the condition codes
 - **PSR[2]** is N, PSR[1] is Z, PSR[0] is P
