@@ -18,14 +18,14 @@ enum {
 };
 
 enum reg {
-    R0 = 0,
-    R1,
-    R2,
-    R3,
-    R4,
-    R5,
-    R6,
-    R7,
+    R_R0 = 0,
+    R_R1,
+    R_R2,
+    R_R3,
+    R_R4,
+    R_R5,
+    R_R6,
+    R_R7,
     R_PC,    /* program counter */
     R_COND,
     R_COUNT
@@ -77,7 +77,36 @@ uint16_t memory[MEMORY_MAX];
 uint16_t reg[R_COUNT];
 
 // input buffering
+struct termios original_tio;
+
+void disable_input_buffering() {
+    tcgetattr(STDIN_FILENO, &original_tio);
+    struct termios new_tio = original_tio;
+    new_tio.c_lflag &= ~ICANON & ~ECHO;
+    tcsetattr(STDIN_FILENO, TCSANOW, &new_tio);
+}
+
+void restore_input_buffering() {
+    tcsetattr(STDIN_FILENO, TCSANOW, &original_tio);
+}
+
+uint16_t check_key() {
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(STDIN_FILENO, &readfds);
+    struct timeval timeout;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 0;
+    return select(1, &readfds, NULL, NULL, &timeout) != 0;
+}
+
 // handle interrupt
+void handle_interrupt(int signal) {
+    restore_input_buffering();
+    printf("\n");
+    exit(-2);
+}
+
 // sign extend
 uint16_t sign_extend(uint16_t x, int bit_count) {
     if((x >> (bit_count - 1)) & 1) {
@@ -163,6 +192,8 @@ int main(int argc, char *argv[]) {
         }
     }
     /* setup */
+    signal(SIGINT, handle_interrupt);
+    disable_input_buffering();
 
     reg[R_COND] = FL_ZRO;
 
@@ -252,7 +283,7 @@ int main(int argc, char *argv[]) {
             case OP_LDI:
                 {
                     uint16_t r0 = (instr >> 9) & 0x7;
-                    uint16_t pc_offset = sign_extent(instr & 0x1FF, 9);
+                    uint16_t pc_offset = sign_extend(instr & 0x1FF, 9);
                     reg[r0] = mem_read(mem_read(reg[R_PC] + pc_offset));
                     update_flags(r0);
                 }
