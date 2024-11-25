@@ -202,7 +202,7 @@ int main(int argc, char *argv[]) {
 
     int running = 1;
     while(running) {
-        uint16_t instr = mem_str(reg[R_PC]++);
+        uint16_t instr = mem_read(reg[R_PC]++);
         uint16_t op = instr >> 12;
         switch(op) {
             case OP_ADD:
@@ -368,7 +368,7 @@ int main(int argc, char *argv[]) {
                                 uint16_t* c = memory + reg[R_R0];
                                 while(*c) {
                                     char char1 = (*c) & 0xFF;
-                                    puts(char1, stdout);
+                                    putc(char1, stdout);;
                                     char char2 = (*c) >> 8;
                                     if(char2) putc(char2, stdout);
                                     ++c;
@@ -393,4 +393,6 @@ int main(int argc, char *argv[]) {
                 break;
         }
     }
+    //shutdown
+    restore_input_buffering();
 }
