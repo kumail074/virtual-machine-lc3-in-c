@@ -12,6 +12,11 @@
 #include <sys/mman.h>
 
 // memory mapped registers
+enum {
+    MR_KBSR = 0xFE00,
+    MR_KBDR = 0xFE02
+};
+
 enum reg {
     R0 = 0,
     R1,
@@ -114,8 +119,33 @@ void read_image_file(FILE* file) {
     }
 }
 
-// read image 
+// read image
+int read_image(const char* image_path) {
+    FILE* file = fopen(image_path, "rb");
+    if(!file) return 0;
+    read_image_file(file);
+    fclose(file);
+    return 1;
+}
+
+
 // memory access
+void mem_write(uint16_t address, uint16_t val) {
+    memory[address] = val;
+}
+
+uint16_t mem_read(uint16_t address) {
+    if(address == MR_KBSR) {
+        if(check_key()) {
+            memory[MR_KBSR] = 1 << 15;
+            memory[MR_KBDR] = getchar();
+        } else {
+            memory[MR_KBSR] = 0;
+        }
+    }
+    return memory[address];
+}
+
 // main loop
 int main(int argc, char *argv[]) {
 
@@ -271,22 +301,56 @@ int main(int argc, char *argv[]) {
                     reg[R_R7] = reg[R_PC];
                     switch (instr & 0xFF) {
                         case TRAP_GETC:
-                            //trap_getc
+                            {
+                                reg[R_R0] = (uint16_t)getchar();
+                                update_flags(R_R0);
+                            }
                             break;
                         case TRAP_OUT:
-                            //trap_out
+                            {
+                                putc((char)reg[R_R0], stdout);
+                                fflush(stdout);
+                            }
                             break;
                         case TRAP_PUTS:
-                            //trap_puts
+                            {
+                                uint16_t* c = memory + reg[R_R0];
+                                while(*c) {
+                                    putc((char)*c, stdout);
+                                    ++c;
+                                }
+                                fflush(stdout);
+                            }
                             break;
                         case TRAP_IN:
-                            //trap_in
+                            {
+                                printf("Enter a character: ");
+                                char c = getchar();
+                                putc(c, stdout);
+                                fflush(stdout);
+                                reg[R_R0] = (uint16_t)c;
+                                update_flags(R_R0);
+                            }
                             break;
                         case TRAP_PUTSP:
-                            //trap_putsp
+                            {
+                                uint16_t* c = memory + reg[R_R0];
+                                while(*c) {
+                                    char char1 = (*c) & 0xFF;
+                                    puts(char1, stdout);
+                                    char char2 = (*c) >> 8;
+                                    if(char2) putc(char2, stdout);
+                                    ++c;
+                                }
+                                fflush(stdout);
+                            }
                             break;
                         case TRAP_HALT:
-                            //trap_halt
+                            {
+                                puts("HALT");
+                                fflush(stdout);
+                                running = 0;
+                            }
                             break;
                     }
                 }
